@@ -2,8 +2,21 @@
 <html lang="en" data-theme="light">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<meta name="description" content="Interactive standard normal distribution calculator: Z-score probabilities, percentiles, tails, inverse lookups and raw score conversion."/>
+<meta name="theme-color" content="#6F263D"/>
 <title>Z-Score Explorer — Standard Normal Distribution</title>
+<script>
+  // Apply theme before first paint to avoid a flash
+  (function () {
+    document.documentElement.classList.add('js');
+    try {
+      var t = localStorage.getItem('z-theme');
+      if (!t && window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches) t = 'dark';
+      if (t) document.documentElement.setAttribute('data-theme', t);
+    } catch (e) {}
+  })();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
@@ -11,151 +24,163 @@
 </head>
 <body>
 
+<div class="scroll-progress" id="scrollProgress" aria-hidden="true"></div>
+
 <!-- ===== NAVIGATION ===== -->
-<nav class="nav" role="navigation" aria-label="Main navigation">
+<nav class="nav" id="nav" aria-label="Main navigation">
   <div class="container nav-inner">
-    <a href="#" class="nav-logo" aria-label="Z-Score Explorer Home">
+    <a href="#top" class="nav-logo" aria-label="Z-Score Explorer home">
       <div class="nav-logo-icon" aria-hidden="true">Z</div>
       <span class="nav-logo-text">Z-Score Explorer</span>
     </a>
     <ul class="nav-links">
       <li><a href="#calculator">Calculator</a></li>
-      <li><a href="#distribution">Distribution</a></li>
+      <li><a href="#confidence">Confidence</a></li>
       <li><a href="#reference">Reference</a></li>
       <li><a href="#converter">Converter</a></li>
       <li><a href="#facts">About</a></li>
     </ul>
-    <div style="display:flex;gap:8px;align-items:center;">
-      <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode" title="Toggle theme">
-        <span id="themeIcon">☽</span>
+    <div class="nav-actions">
+      <button class="icon-btn theme-toggle" id="themeToggle" aria-label="Toggle dark mode" title="Toggle theme">
+        <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2 12h2.5M19.5 12H22M4.2 19.8 6 18M18 6l1.8-1.8"/></svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11Z"/></svg>
       </button>
-      <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Open menu" aria-expanded="false">☰</button>
+      <button class="icon-btn mobile-menu-btn" id="mobileMenuBtn" aria-label="Open menu" aria-expanded="false" aria-controls="mobileNav">
+        <span class="burger" aria-hidden="true"><span></span><span></span><span></span></span>
+      </button>
     </div>
   </div>
+  <div class="mobile-nav" id="mobileNav">
+    <a href="#calculator">Calculator</a>
+    <a href="#confidence">Confidence</a>
+    <a href="#reference">Reference</a>
+    <a href="#converter">Converter</a>
+    <a href="#facts">About</a>
+  </div>
 </nav>
-<div class="mobile-nav" id="mobileNav" role="navigation" aria-label="Mobile navigation">
-  <a href="#calculator" onclick="closeMobileMenu()">Calculator</a>
-  <a href="#distribution" onclick="closeMobileMenu()">Distribution</a>
-  <a href="#reference" onclick="closeMobileMenu()">Reference</a>
-  <a href="#converter" onclick="closeMobileMenu()">Converter</a>
-  <a href="#facts" onclick="closeMobileMenu()">About</a>
-</div>
 
 <!-- ===== HERO ===== -->
-<section class="hero" id="top">
-  <div class="container">
-    <div class="hero-badge anim-in"><span class="dot"></span> STANDARD NORMAL <span class="dot"></span> μ = 0 <span class="dot"></span> σ = 1</div>
-    <h1 class="anim-in anim-delay-1">Understand your <span>Z-score.</span></h1>
-    <p class="anim-in anim-delay-2">Calculate probability, explore percentiles, and see exactly where a value sits on the standard normal distribution.</p>
+<header class="hero" id="top">
+  <div class="hero-bg" aria-hidden="true">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <svg class="hero-curve" viewBox="0 0 1200 300" preserveAspectRatio="none">
+      <path id="heroCurve" d=""/>
+    </svg>
   </div>
-</section>
+  <div class="container hero-inner">
+    <div class="hero-badge anim-in"><span class="dot"></span> STANDARD NORMAL <span class="dot"></span> μ = 0 <span class="dot"></span> σ = 1</div>
+    <h1 class="anim-in anim-delay-1">Understand your <span class="grad-text">Z-score.</span></h1>
+    <p class="anim-in anim-delay-2">Calculate probabilities, explore percentiles, and see exactly where a value sits on the standard normal distribution.</p>
+    <div class="hero-cta anim-in anim-delay-3">
+      <a href="#calculator" class="btn btn-primary btn-lg">Start calculating</a>
+      <a href="#converter" class="btn btn-ghost btn-lg">Convert raw scores</a>
+    </div>
+  </div>
+</header>
 
 <!-- ===== MAIN CALCULATOR + GRAPH ===== -->
-<section id="calculator">
+<main>
+<section id="calculator" class="calc-section">
   <div class="container">
     <div class="main-grid">
 
       <!-- LEFT: Calculator -->
-      <div>
-        <div class="card">
+      <div class="calc-col">
+        <div class="card reveal">
           <div class="card-header">
-            <span class="card-title">Distribution Mode</span>
+            <span class="card-title">Distribution mode</span>
           </div>
 
           <!-- Tabs -->
           <div class="tab-bar" role="tablist" aria-label="Calculation mode">
+            <span class="tab-indicator" id="tabIndicator" aria-hidden="true"></span>
             <button class="tab-btn active" role="tab" data-tab="area0z" aria-selected="true">0 → Z</button>
-            <button class="tab-btn" role="tab" data-tab="leftTail" aria-selected="false">Left Tail</button>
-            <button class="tab-btn" role="tab" data-tab="rightTail" aria-selected="false">Right Tail</button>
+            <button class="tab-btn" role="tab" data-tab="leftTail" aria-selected="false">Left tail</button>
+            <button class="tab-btn" role="tab" data-tab="rightTail" aria-selected="false">Right tail</button>
             <button class="tab-btn" role="tab" data-tab="between" aria-selected="false">Between</button>
           </div>
 
-          <!-- Tab: Area 0→Z / Left / Right -->
-          <div class="tab-content active" id="tab-area0z">
+          <!-- Single Z input (0→Z, left, right) -->
+          <div class="tab-content active" id="singleInputs">
             <div class="input-group">
-              <label class="input-label" for="zInput">Z-Score</label>
+              <label class="input-label" for="zInput">Z-score</label>
               <input type="number" id="zInput" class="input-field" step="any" placeholder="e.g. 1.96" aria-describedby="zError"/>
               <div class="input-error" id="zError" role="alert"></div>
             </div>
           </div>
-          <div class="tab-content" id="tab-leftTail">
-            <div class="input-group">
-              <label class="input-label" for="zInputLeft">Z-Score</label>
-              <input type="number" id="zInputLeft" class="input-field" step="any" placeholder="e.g. 1.96"/>
-              <div class="input-error" id="zErrorLeft" role="alert"></div>
-            </div>
-          </div>
-          <div class="tab-content" id="tab-rightTail">
-            <div class="input-group">
-              <label class="input-label" for="zInputRight">Z-Score</label>
-              <input type="number" id="zInputRight" class="input-field" step="any" placeholder="e.g. 1.96"/>
-              <div class="input-error" id="zErrorRight" role="alert"></div>
-            </div>
-          </div>
-          <div class="tab-content" id="tab-between">
+
+          <!-- Between inputs -->
+          <div class="tab-content" id="betweenInputs">
             <div class="input-row">
               <div class="input-group">
                 <label class="input-label" for="zInput1">Z₁ (lower)</label>
-                <input type="number" id="zInput1" class="input-field" step="any" placeholder="-1.96"/>
+                <input type="number" id="zInput1" class="input-field" step="any" placeholder="-1.96" aria-describedby="zError1"/>
                 <div class="input-error" id="zError1" role="alert"></div>
               </div>
               <div class="input-group">
                 <label class="input-label" for="zInput2">Z₂ (upper)</label>
-                <input type="number" id="zInput2" class="input-field" step="any" placeholder="1.96"/>
+                <input type="number" id="zInput2" class="input-field" step="any" placeholder="1.96" aria-describedby="zError2"/>
                 <div class="input-error" id="zError2" role="alert"></div>
               </div>
             </div>
           </div>
 
+          <!-- Slider -->
+          <div class="slider-wrap">
+            <input type="range" id="zSlider" class="z-slider" min="-4" max="4" step="0.01" value="1.96" aria-label="Z-score slider"/>
+            <div class="slider-scale" aria-hidden="true"><span>−4</span><span>−2</span><span>0</span><span>2</span><span>4</span></div>
+          </div>
+
           <!-- Presets -->
           <div class="presets" id="presetBar" aria-label="Quick Z-score presets">
-            <button class="preset-btn" data-z="-3">-3</button>
-            <button class="preset-btn" data-z="-2">-2</button>
-            <button class="preset-btn" data-z="-1.96">-1.96</button>
-            <button class="preset-btn" data-z="-1">-1</button>
+            <button class="preset-btn" data-z="-3">−3</button>
+            <button class="preset-btn" data-z="-2">−2</button>
+            <button class="preset-btn" data-z="-1.96">−1.96</button>
+            <button class="preset-btn" data-z="-1">−1</button>
             <button class="preset-btn" data-z="0">0</button>
             <button class="preset-btn" data-z="1">1</button>
             <button class="preset-btn" data-z="1.645">1.645</button>
-            <button class="preset-btn" data-z="1.96" >1.96</button>
+            <button class="preset-btn" data-z="1.96">1.96</button>
             <button class="preset-btn" data-z="2">2</button>
             <button class="preset-btn" data-z="3">3</button>
           </div>
 
-          <div style="display:flex;gap:10px;">
-            <button class="btn-primary" id="calcBtn" style="flex:3;">Calculate</button>
-            <button class="btn-secondary" id="resetBtn" style="flex:1;">Reset</button>
+          <div class="btn-row">
+            <button class="btn btn-primary" id="calcBtn">Calculate</button>
+            <button class="btn btn-secondary" id="resetBtn">Reset</button>
           </div>
 
           <!-- Results -->
-          <div class="results-panel" id="resultsPanel" style="display:none;" aria-live="polite">
+          <div class="results-panel" id="resultsPanel" hidden aria-live="polite">
             <div class="result-primary">
-              <div class="result-primary-label" id="resPrimaryLabel">AREA FROM 0 TO Z</div>
-              <div class="result-primary-value" id="resPrimaryValue">0.4750</div>
-              <div class="result-primary-pct" id="resPrimaryPct">47.50%</div>
+              <div class="result-primary-label" id="resPrimaryLabel"></div>
+              <div class="result-primary-value" id="resPrimaryValue">0.0000</div>
+              <div class="result-primary-pct" id="resPrimaryPct"></div>
             </div>
             <div class="result-grid" id="resultGrid">
               <div class="result-item">
                 <div class="result-item-label">Percentile</div>
-                <div class="result-item-value" id="resPercentile">97.50<span style="font-size:12px;">th</span></div>
+                <div class="result-item-value" id="resPercentile"></div>
               </div>
               <div class="result-item">
-                <div class="result-item-label">Cumulative P</div>
-                <div class="result-item-value" id="resCumulative">0.9750</div>
+                <div class="result-item-label">Cumulative Φ(z)</div>
+                <div class="result-item-value" id="resCumulative"></div>
               </div>
               <div class="result-item">
-                <div class="result-item-label">Left Tail</div>
-                <div class="result-item-value" id="resLeftTail">97.50%</div>
+                <div class="result-item-label">Left tail</div>
+                <div class="result-item-value" id="resLeftTail"></div>
               </div>
               <div class="result-item">
-                <div class="result-item-label">Right Tail</div>
-                <div class="result-item-value" id="resRightTail">2.50%</div>
+                <div class="result-item-label">Right tail</div>
+                <div class="result-item-value" id="resRightTail"></div>
               </div>
             </div>
           </div>
         </div>
 
         <!-- Explanation -->
-        <div class="explanation-box" id="explanationBox" style="display:none;">
+        <div class="card explanation-box" id="explanationBox" hidden>
           <div class="card-header">
             <span class="card-title">Interpretation</span>
           </div>
@@ -163,54 +188,55 @@
         </div>
 
         <!-- Meaning -->
-        <div class="meaning-box" id="meaningBox" style="display:none;">
+        <div class="card meaning-box" id="meaningBox" hidden>
           <div class="card-header">
             <span class="card-title">What does this Z-score mean?</span>
           </div>
-          <div id="meaningBadge" class="meaning-badge" style="margin-bottom:8px;"></div>
+          <div id="meaningBadge" class="meaning-badge"></div>
           <div id="meaningDesc" class="meaning-desc"></div>
         </div>
       </div>
 
       <!-- RIGHT: Graph -->
       <div class="graph-panel" id="distribution">
-        <div class="graph-container card" style="padding:24px;">
+        <div class="card graph-container reveal">
           <div class="graph-title-bar">
-            <span class="card-title">Normal Distribution</span>
-            <span class="card-title" id="graphModeLabel" style="color:var(--accent);">0 → Z</span>
+            <span class="card-title">Normal distribution</span>
+            <span class="mode-pill" id="graphModeLabel">0 → Z</span>
           </div>
-          <div class="graph-svg-wrap" role="img" aria-label="Standard normal distribution bell curve">
-            <svg id="bellCurve" viewBox="0 0 700 340" preserveAspectRatio="xMidYMid meet"></svg>
+          <div class="graph-svg-wrap" id="graphWrap">
+            <svg id="bellCurve" role="img" aria-label="Standard normal distribution bell curve with the selected area shaded"></svg>
           </div>
-          <div class="graph-legend">
-            <div class="graph-legend-item"><div class="graph-legend-dot" style="background:var(--curve-stroke);"></div>Bell Curve</div>
-            <div class="graph-legend-item"><div class="graph-legend-dot" style="background:var(--curve-fill);"></div>Selected Area</div>
-            <div class="graph-legend-item"><div class="graph-legend-dot" style="background:var(--marker-color);"></div>Z Position</div>
+          <div class="graph-footer">
+            <div class="graph-legend">
+              <div class="graph-legend-item"><span class="graph-legend-dot dot-curve"></span>Bell curve</div>
+              <div class="graph-legend-item"><span class="graph-legend-dot dot-area"></span>Selected area</div>
+              <div class="graph-legend-item"><span class="graph-legend-dot dot-marker"></span>Z position</div>
+            </div>
+            <div class="graph-hint">Drag on the chart to move Z</div>
           </div>
         </div>
 
         <!-- Probability Bar -->
-        <div class="prob-bar-section" id="probBarSection" style="display:none;">
-          <div class="prob-bar-container">
-            <div class="card-header"><span class="card-title">Probability Breakdown</span></div>
-            <div class="prob-bar-visual" id="probBar">
-              <div class="prob-segment" id="probLeft" style="background:var(--accent2);width:50%;"></div>
-              <div class="prob-segment" id="probCenter" style="background:var(--accent);width:0%;"></div>
-              <div class="prob-segment" id="probRight" style="background:var(--text-light);width:50%;"></div>
-            </div>
-            <div class="prob-labels">
-              <div class="prob-label-item"><div class="prob-label-title">Left of Z</div><div class="prob-label-value" id="probLeftVal">50.00%</div></div>
-              <div class="prob-label-item"><div class="prob-label-title">0 to Z</div><div class="prob-label-value" id="probCenterVal">0.00%</div></div>
-              <div class="prob-label-item"><div class="prob-label-title">Right of Z</div><div class="prob-label-value" id="probRightVal">50.00%</div></div>
-            </div>
+        <div class="card prob-bar-container reveal" id="probBarSection" hidden>
+          <div class="card-header"><span class="card-title">Probability breakdown</span></div>
+          <div class="prob-bar-visual" id="probBar">
+            <div class="prob-segment" id="probSeg0"></div>
+            <div class="prob-segment" id="probSeg1"></div>
+            <div class="prob-segment" id="probSeg2"></div>
+          </div>
+          <div class="prob-labels">
+            <div class="prob-label-item" id="probLab0"><div class="prob-label-title"><i class="swatch"></i><span></span></div><div class="prob-label-value"></div></div>
+            <div class="prob-label-item" id="probLab1"><div class="prob-label-title"><i class="swatch"></i><span></span></div><div class="prob-label-value"></div></div>
+            <div class="prob-label-item" id="probLab2"><div class="prob-label-title"><i class="swatch"></i><span></span></div><div class="prob-label-value"></div></div>
           </div>
         </div>
 
         <!-- Z-Table Lookup -->
-        <div class="card" style="margin-top:24px;" id="ztableLookup">
-          <div class="card-header"><span class="card-title">Z-Table Lookup</span></div>
-          <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">Traditional Z-tables give the area from the mean (0) to a positive Z. For negative Z, use symmetry: P(0 ≤ Z ≤ |z|).</p>
-          <div class="ztable-grid" id="ztableGrid">
+        <div class="card reveal" id="ztableLookup">
+          <div class="card-header"><span class="card-title">Z-table lookup</span></div>
+          <p class="muted-text">Printed Z-tables give the area from the mean (0) to a positive Z, with Z rounded to two decimals. For negative Z, use symmetry: P(0 ≤ Z ≤ |z|).</p>
+          <div class="ztable-grid">
             <div class="ztable-cell">
               <div class="ztable-cell-label">Row</div>
               <div class="ztable-cell-value" id="ztRow">—</div>
@@ -220,10 +246,11 @@
               <div class="ztable-cell-value" id="ztCol">—</div>
             </div>
             <div class="ztable-cell">
-              <div class="ztable-cell-label">Table Value</div>
-              <div class="ztable-cell-value" id="ztVal" style="color:var(--accent);">—</div>
+              <div class="ztable-cell-label">Table value</div>
+              <div class="ztable-cell-value accent" id="ztVal">—</div>
             </div>
           </div>
+          <p class="ztable-note" id="ztNote"></p>
         </div>
       </div>
 
@@ -234,27 +261,27 @@
 <!-- ===== CONFIDENCE INTERVALS ===== -->
 <section class="section" id="confidence">
   <div class="container">
-    <div class="section-header">
-      <div class="section-eyebrow">Confidence Intervals</div>
-      <h2 class="section-title">Common Critical Values</h2>
-      <p class="section-subtitle">Click a confidence level to load the corresponding Z-score into the calculator.</p>
+    <div class="section-header reveal">
+      <div class="section-eyebrow">Confidence intervals</div>
+      <h2 class="section-title">Common critical values</h2>
+      <p class="section-subtitle">Tap a confidence level to shade the central area between −Z and +Z.</p>
     </div>
     <div class="conf-cards">
-      <div class="conf-card" data-z="1.645" tabindex="0" role="button" aria-label="Load 90% confidence Z-score">
+      <button class="conf-card reveal" data-z="1.645" aria-label="Load 90% confidence interval">
         <div class="conf-card-level">90%</div>
         <div class="conf-card-z">Z = ±1.645</div>
-        <div class="conf-card-label">Confidence Level</div>
-      </div>
-      <div class="conf-card" data-z="1.960" tabindex="0" role="button" aria-label="Load 95% confidence Z-score">
+        <div class="conf-card-label">α = 0.10</div>
+      </button>
+      <button class="conf-card reveal" data-z="1.96" aria-label="Load 95% confidence interval">
         <div class="conf-card-level">95%</div>
         <div class="conf-card-z">Z = ±1.960</div>
-        <div class="conf-card-label">Confidence Level</div>
-      </div>
-      <div class="conf-card" data-z="2.576" tabindex="0" role="button" aria-label="Load 99% confidence Z-score">
+        <div class="conf-card-label">α = 0.05</div>
+      </button>
+      <button class="conf-card reveal" data-z="2.576" aria-label="Load 99% confidence interval">
         <div class="conf-card-level">99%</div>
         <div class="conf-card-z">Z = ±2.576</div>
-        <div class="conf-card-label">Confidence Level</div>
-      </div>
+        <div class="conf-card-label">α = 0.01</div>
+      </button>
     </div>
   </div>
 </section>
@@ -262,16 +289,16 @@
 <!-- ===== REFERENCE TABLE ===== -->
 <section class="section" id="reference">
   <div class="container">
-    <div class="section-header">
+    <div class="section-header reveal">
       <div class="section-eyebrow">Reference</div>
-      <h2 class="section-title">Common Z-Score Values</h2>
-      <p class="section-subtitle">Click any row to load that Z-score into the calculator.</p>
+      <h2 class="section-title">Common Z-score values</h2>
+      <p class="section-subtitle">Tap any row to load that Z-score into the calculator.</p>
     </div>
-    <div class="card" style="padding:0;overflow:hidden;">
+    <div class="card table-card reveal">
       <div class="ref-table-wrap">
-        <table class="ref-table" id="refTable" aria-label="Common Z-score reference values">
+        <table class="ref-table" aria-label="Common Z-score reference values">
           <thead>
-            <tr><th>Z-Score</th><th>Area (0→Z)</th><th>CDF (Φ)</th><th>Percentile</th><th>Right Tail</th></tr>
+            <tr><th>Z</th><th>Area 0→Z</th><th>CDF Φ(z)</th><th class="col-pct">Percentile</th><th>Right tail</th></tr>
           </thead>
           <tbody id="refTableBody"></tbody>
         </table>
@@ -280,20 +307,20 @@
   </div>
 </section>
 
-<!-- ===== RAW SCORE CONVERTER ===== -->
+<!-- ===== CONVERTERS ===== -->
 <section class="section" id="converter">
   <div class="container">
-    <div class="section-header">
+    <div class="section-header reveal">
       <div class="section-eyebrow">Converter</div>
-      <h2 class="section-title">Raw Score ↔ Z-Score</h2>
-      <p class="section-subtitle">Convert between raw scores and Z-scores using your own mean and standard deviation.</p>
+      <h2 class="section-title">Raw score ↔ Z-score ↔ probability</h2>
+      <p class="section-subtitle">Results update as you type.</p>
     </div>
     <div class="converter-grid">
-      <div class="converter-card">
-        <div class="card-header"><span class="card-title">Raw Score → Z-Score</span></div>
-        <p style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">Z = (X − μ) / σ</p>
+      <div class="card converter-card reveal">
+        <div class="card-header"><span class="card-title">Raw score → Z-score</span></div>
+        <p class="formula">Z = (X − μ) / σ</p>
         <div class="input-group">
-          <label class="input-label" for="convX">Raw Score (X)</label>
+          <label class="input-label" for="convX">Raw score (X)</label>
           <input type="number" id="convX" class="input-field" step="any" placeholder="e.g. 85"/>
         </div>
         <div class="input-row">
@@ -302,18 +329,19 @@
             <input type="number" id="convMu1" class="input-field" step="any" placeholder="e.g. 70"/>
           </div>
           <div class="input-group">
-            <label class="input-label" for="convSig1">Std Dev (σ)</label>
+            <label class="input-label" for="convSig1">Std dev (σ)</label>
             <input type="number" id="convSig1" class="input-field" step="any" placeholder="e.g. 10"/>
           </div>
         </div>
-        <button class="btn-primary" onclick="convertToZ()">Convert to Z</button>
         <div class="converter-result" id="convResult1">—</div>
+        <button class="btn btn-ghost btn-sm send-btn" id="sendZ1" hidden>Show on the chart ↑</button>
       </div>
-      <div class="converter-card">
-        <div class="card-header"><span class="card-title">Z-Score → Raw Score</span></div>
-        <p style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">X = μ + Zσ</p>
+
+      <div class="card converter-card reveal">
+        <div class="card-header"><span class="card-title">Z-score → raw score</span></div>
+        <p class="formula">X = μ + Z·σ</p>
         <div class="input-group">
-          <label class="input-label" for="convZ2">Z-Score</label>
+          <label class="input-label" for="convZ2">Z-score</label>
           <input type="number" id="convZ2" class="input-field" step="any" placeholder="e.g. 1.5"/>
         </div>
         <div class="input-row">
@@ -322,12 +350,30 @@
             <input type="number" id="convMu2" class="input-field" step="any" placeholder="e.g. 70"/>
           </div>
           <div class="input-group">
-            <label class="input-label" for="convSig2">Std Dev (σ)</label>
+            <label class="input-label" for="convSig2">Std dev (σ)</label>
             <input type="number" id="convSig2" class="input-field" step="any" placeholder="e.g. 10"/>
           </div>
         </div>
-        <button class="btn-primary" onclick="convertToRaw()">Convert to Raw Score</button>
         <div class="converter-result" id="convResult2">—</div>
+      </div>
+
+      <div class="card converter-card reveal">
+        <div class="card-header"><span class="card-title">Probability → Z-score</span></div>
+        <p class="formula">z = Φ⁻¹(p)</p>
+        <div class="input-group">
+          <label class="input-label" for="invP">Probability (0 – 1)</label>
+          <input type="number" id="invP" class="input-field" step="any" min="0" max="1" placeholder="e.g. 0.95"/>
+        </div>
+        <div class="input-group">
+          <label class="input-label" for="invType">Probability is the…</label>
+          <select id="invType" class="input-field select-field">
+            <option value="left">Left tail P(Z ≤ z)</option>
+            <option value="right">Right tail P(Z ≥ z)</option>
+            <option value="central">Central area P(−z ≤ Z ≤ z)</option>
+          </select>
+        </div>
+        <div class="converter-result" id="convResult3">—</div>
+        <button class="btn btn-ghost btn-sm send-btn" id="sendZ3" hidden>Show on the chart ↑</button>
       </div>
     </div>
   </div>
@@ -336,45 +382,46 @@
 <!-- ===== QUICK FACTS ===== -->
 <section class="section" id="facts">
   <div class="container">
-    <div class="section-header">
-      <div class="section-eyebrow">Statistical Properties</div>
-      <h2 class="section-title">Quick Facts</h2>
+    <div class="section-header reveal">
+      <div class="section-eyebrow">Statistical properties</div>
+      <h2 class="section-title">Quick facts</h2>
       <p class="section-subtitle">Key properties of the standard normal distribution.</p>
     </div>
     <div class="facts-grid">
-      <div class="fact-card">
+      <div class="fact-card reveal">
         <div class="fact-card-icon">μ</div>
         <div class="fact-card-title">Mean</div>
-        <div class="fact-card-value"><strong>μ = 0</strong> — The distribution is centered at zero.</div>
+        <div class="fact-card-value"><strong>μ = 0</strong> — the distribution is centred at zero.</div>
       </div>
-      <div class="fact-card">
+      <div class="fact-card reveal">
         <div class="fact-card-icon">σ</div>
-        <div class="fact-card-title">Standard Deviation</div>
-        <div class="fact-card-value"><strong>σ = 1</strong> — One unit equals one standard deviation.</div>
+        <div class="fact-card-title">Standard deviation</div>
+        <div class="fact-card-value"><strong>σ = 1</strong> — one unit equals one standard deviation.</div>
       </div>
-      <div class="fact-card">
+      <div class="fact-card reveal">
         <div class="fact-card-icon">⟷</div>
         <div class="fact-card-title">Symmetry</div>
         <div class="fact-card-value">P(Z ≤ −z) = P(Z ≥ z). The curve is perfectly symmetric about zero.</div>
       </div>
-      <div class="fact-card">
+      <div class="fact-card reveal">
         <div class="fact-card-icon">68</div>
-        <div class="fact-card-title">Empirical Rule</div>
-        <div class="fact-card-value"><strong>68%</strong> within ±1σ · <strong>95%</strong> within ±2σ · <strong>99.7%</strong> within ±3σ</div>
+        <div class="fact-card-title">Empirical rule</div>
+        <div class="fact-card-value"><strong>68.27%</strong> within ±1σ · <strong>95.45%</strong> within ±2σ · <strong>99.73%</strong> within ±3σ</div>
       </div>
-      <div class="fact-card">
+      <div class="fact-card reveal">
         <div class="fact-card-icon">∫</div>
-        <div class="fact-card-title">Total Area</div>
+        <div class="fact-card-title">Total area</div>
         <div class="fact-card-value">The total area under the curve equals <strong>1</strong> (100%).</div>
       </div>
-      <div class="fact-card">
+      <div class="fact-card reveal">
         <div class="fact-card-icon">f</div>
         <div class="fact-card-title">PDF</div>
-        <div class="fact-card-value">f(x) = (1/√2π) · e<sup>−x²/2</sup></div>
+        <div class="fact-card-value">f(x) = (1/√(2π)) · e<sup>−x²/2</sup></div>
       </div>
     </div>
   </div>
 </section>
+</main>
 
 <!-- ===== FOOTER ===== -->
 <footer class="footer">
@@ -385,20 +432,20 @@
           <div class="footer-logo-icon">Z</div>
           <span class="footer-logo-text">Z-Score Explorer</span>
         </div>
-        <p class="footer-desc">An interactive guide to the standard normal distribution. Values are calculated using a high-accuracy numerical approximation of the cumulative distribution function.</p>
+        <p class="footer-desc">An interactive guide to the standard normal distribution. Probabilities use a double-precision approximation of Φ(z) (relative error below 10⁻⁸, even far into the tails).</p>
       </div>
       <div class="footer-links">
         <div class="footer-col">
           <div class="footer-col-title">Navigate</div>
           <a href="#calculator">Calculator</a>
-          <a href="#distribution">Distribution</a>
+          <a href="#confidence">Confidence</a>
           <a href="#reference">Reference</a>
         </div>
         <div class="footer-col">
           <div class="footer-col-title">Tools</div>
           <a href="#converter">Converter</a>
-          <a href="#confidence">Confidence</a>
           <a href="#facts">About</a>
+          <a href="#top">Back to top ↑</a>
         </div>
       </div>
     </div>
@@ -409,6 +456,5 @@
 </footer>
 
 <script src="js/app.js"></script>
-
 </body>
 </html>
