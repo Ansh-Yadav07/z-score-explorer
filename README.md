@@ -11,14 +11,16 @@ An interactive standard normal distribution calculator built with vanilla HTML, 
   - Left tail P(Z ≤ z)
   - Right tail P(Z ≥ z)
   - Between two Z-scores P(z₁ ≤ Z ≤ z₂)
-- **Interactive Bell Curve** — Real-time SVG visualization with shaded areas, Z-markers, and σ labels
+- **Interactive Bell Curve** — Responsive, animated SVG chart; drag on it (or use the slider) to move Z
+- **Probability → Z** — Inverse lookup for left-tail, right-tail, or central probabilities
 - **Probability Breakdown Bar** — Visual split of left tail, center area, and right tail
 - **Z-Table Lookup** — Shows the traditional row/column/value decomposition
 - **Raw Score ↔ Z-Score Converter** — Convert between raw scores and Z-scores using custom μ and σ
-- **Confidence Interval Cards** — Quick-load common critical values (90%, 95%, 99%)
+- **Confidence Interval Cards** — Load the central ±Z area for 90%, 95%, 99%
 - **Reference Table** — Common Z-scores with CDF, percentile, and tail probabilities
 - **Dark / Light Theme** — Toggle with automatic OS preference detection
-- **Fully Responsive** — Works on desktop, tablet, and mobile
+- **Fully Responsive** — Mobile-first layout, touch-friendly controls, readable chart at any width
+- **Animations** — Scroll reveals, animated chart transitions, count-up results (respects reduced-motion)
 
 ## Project Structure
 
@@ -60,12 +62,9 @@ Then visit `http://localhost:8000`.
 
 ### Math Engine
 
-The CDF is computed using the **Abramowitz & Stegun rational approximation** (formula 7.1.26), which provides accuracy to ~1.5 × 10⁻⁷:
+The CDF is computed with the **Hart (1968) / West (2005) double-precision algorithm**, which keeps a relative error below 10⁻⁸ even far into the tails. Right-tail and between-area probabilities are computed from whichever tail avoids floating-point cancellation, so tiny probabilities (e.g. P(Z ≥ 5) ≈ 2.867 × 10⁻⁷) are reported correctly.
 
-```
-Φ(z) = 1 - φ(z)(a₁t + a₂t² + a₃t³ + a₄t⁴ + a₅t⁵)
-where t = 1 / (1 + 0.2316419·|z|)
-```
+The inverse CDF uses **Acklam's rational approximation** refined with one Halley step.
 
 The PDF uses the standard formula:
 
@@ -76,7 +75,7 @@ f(x) = (1/√2π) · e^(−x²/2)
 ### Visualization
 
 The bell curve is rendered as an SVG with:
-- 400-step polyline for smooth curve rendering
+- Redrawn at the container's real pixel width so labels stay readable on phones
 - Gradient-filled shaded regions for selected probability areas
 - Dashed marker lines with labeled dots at Z-positions
 - Dynamic σ and axis labels
